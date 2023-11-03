@@ -7,6 +7,7 @@ import time
 import xlrd
 import efinance as ef
 import configparser
+import os
 
 def read_excel_column_format_string(file_path, column_name):
     try:
@@ -177,14 +178,31 @@ def get_stock_f10_value():
 
 
         # 定义要爬取的网页URL
+        last_element = 0
         number_List = 0
-        for list in checklist:
+        for list_param in checklist:
+            new_file_path=f'found_data_{file_path.split(".")[0]}.csv'
+            if os.path.exists(new_file_path):
+                with open(new_file_path, 'r', newline='',encoding='utf-8-sig') as csvfile:
+                    reader = csv.reader(csvfile)
+    
+                    # 读取第一列的数据
+                    first_column_data = [row[0] for row in reader]
+    
+                    if first_column_data:
+                        last_element = first_column_data[-1]
+                        print("第一列的最后一个元素是:", last_element)
+                    else:
+                        print("第一列没有数据")
+                if int(last_element) > int(list_param):
+                    continue
+
             if config.has_section('web_url_configure'):
                 first_url=config.get("web_url_configure","WEBS_URL")
                 web_name=config.get("web_url_configure","WEB_NAME")
-                url=f'{first_url}/{list}/{web_name}'
+                url=f'{first_url}/{list_param}/{web_name}'
             else:
-                url = f'https://q.stock.sohu.com/cn/{list}/index.shtml'  
+                url = f'https://q.stock.sohu.com/cn/{list_param}/index.shtml'  
             
             # 调用函数并传入URL和要查找的文字
             if config.has_section('web_url_configure'):
@@ -202,7 +220,7 @@ def get_stock_f10_value():
             # 调用函数，将找到的数据写入Excel文件
             output_file = f'found_data_{file_path.split(".")[0]}.csv'  # 设置输出的Excel文件名
 
-            write_to_csv(found_rows, output_file,number_List,list)
+            write_to_csv(found_rows, output_file,number_List,list_param)
             number_List=number_List+1
 
 
