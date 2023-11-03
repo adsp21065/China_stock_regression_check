@@ -6,6 +6,7 @@ import pandas as pd
 import time
 import xlrd
 import efinance as ef
+import configparser
 
 def read_excel_column_format_string(file_path, column_name):
     try:
@@ -156,38 +157,53 @@ def write_price_to_csv(data, output_file,first_flag,search_name):
 
 
 def get_stock_f10_value():
-    file_path = 'GPLIST.xls'  # READ STOCK LIST
-    column_name = 'A股代码'
-    checklist=[]
-    selected_data = read_excel_column_format_string(file_path, column_name)
-    #selected_data = read_excel_column(file_path, column_name)
-    if isinstance(selected_data, pd.Series):
-        print(f"成功读取列 '{column_name}' 的数据:")
-        checklist=selected_data.tolist()
-        print(checklist)
+    config=configparser.ConfigParser()
+    config.read("../config.ini",encoding='utf-8-sig')
+    if config.has_section('stock_list_configure'):
+       file_path_list = config.get("stock_list_configure","STOCK_LIST_NAME")
     else:
-        print("读取列失败，错误信息：", selected_data)
+        file_path_list = ['Shenzhen_stock_list.xlsx','Shanghai_stock_list.xls'] # READ STOCK LIST
+    for file_path in file_path_list:
+        column_name = 'A股代码'
+        checklist=[]
+        selected_data = read_excel_column_format_string(file_path, column_name)
+        #selected_data = read_excel_column(file_path, column_name)
+        if isinstance(selected_data, pd.Series):
+            print(f"成功读取列 '{column_name}' 的数据:")
+            checklist=selected_data.tolist()
+            print(checklist)
+        else:
+            print("读取列失败，错误信息：", selected_data)
 
 
-    # 定义要爬取的网页URL
-    number_List = 0
-    for list in checklist:
-        url = f'https://q.stock.sohu.com/cn/{list}/index.shtml'  # 请将此URL替换为你想要爬取的网页的URL
-        # 调用函数并传入URL和要查找的文字
+        # 定义要爬取的网页URL
+        number_List = 0
+        for list in checklist:
+            if config.has_section('web_url_configure'):
+                first_url=config.get("web_url_configure","WEBS_URL")
+                web_name=config.get("web_url_configure","WEB_NAME")
+                url=f'{first_url}/{list}/{web_name}'
+            else:
+                url = f'https://q.stock.sohu.com/cn/{list}/index.shtml'  
+            
+            # 调用函数并传入URL和要查找的文字
+            if config.has_section('web_url_configure'):
+                key_word=config.get("web_url_configure","KEY_WORD")
+                target_text = key_word.split(',')
+            else:
+                target_text = ["每股收益",'每股净资产','主营收入','净利润','销售毛利率','总股本','流通股本','每股资本公积金','每股未分配利润','净资产收益率']  # 将此替换为你要查找的文字
 
-        target_text = ["每股收益",'每股净资产','主营收入','净利润','销售毛利率','总股本','流通股本','每股资本公积金','每股未分配利润','净资产收益率']  # 将此替换为你要查找的文字
+            
+            for i in range(10):
+                found_rows = find_text_in_table(url, target_text)
+                if found_rows:
+                    break
 
-        
-        for i in range(10):
-            found_rows = find_text_in_table(url, target_text)
-            if found_rows:
-                break
+            # 调用函数，将找到的数据写入Excel文件
+            output_file = f'found_data_{file_path.split(".")[0]}.csv'  # 设置输出的Excel文件名
 
-        # 调用函数，将找到的数据写入Excel文件
-        output_file = 'found_data.csv'  # 设置输出的Excel文件名
-
-        write_to_csv(found_rows, output_file,number_List,list)
-        number_List=number_List+1
+            write_to_csv(found_rows, output_file,number_List,list)
+            number_List=number_List+1
 
 
 def get_stock_today_value():
