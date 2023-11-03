@@ -1,7 +1,7 @@
 import pandas as pd
 import csv
 import heapq
-
+import configparser
 def find_top_20_max_values_and_first_elements(csv_file, column_index):
     # 打开CSV文件
     with open(csv_file, "r",encoding='utf-8') as file:
@@ -31,7 +31,20 @@ def find_top_20_max_values_and_first_elements(csv_file, column_index):
     return top_20_max_values
 
 
-
+def compare_csv_files(file1_path, file2_path):
+    try:
+        df1 = pd.read_csv(file1_path)
+        #print(df1.shape,file2_path)
+        df2 = pd.read_csv(file2_path)
+        line1,row1=(df2.shape)
+        line2,row2=(df2.shape)
+        if line1==line2:
+            return True
+        else:
+            return False
+    except Exception as e:
+        print(f"发生错误：{str(e)}")
+        return False
 
 def merge_large_csv_files_with_selected_columns(input_file1, input_file2, output_file, columns_to_select1,columns_to_select2):
     chunk_size = 10000  # 每次读取的行数
@@ -67,20 +80,33 @@ def merge_large_csv_files_with_selected_columns(input_file1, input_file2, output
                         row2 = next(reader2)
                         selected_data1 = [row1[i] for i in columns_to_select1]
                         selected_data2 = [row2[i] for i in columns_to_select2]
-                        print(selected_data1,selected_data2)
-                        combined_data = selected_data1 + selected_data2
+                        result = float(selected_data2[0])/float(selected_data1[1]) 
+                        print(selected_data1,selected_data2,result)
+                        combined_data = selected_data1 + selected_data2+[result]
                         writer.writerow(combined_data)
                     except StopIteration:
                         break
 
 def combin_name_today_price_and_history_value():
-    # 指定要选择的列的位置
-    columns_to_select1 = [0, 1]  # 从文件1选择的列的位置
-    columns_to_select2 = [0, 4, 16]  # 从文件2选择的列的位置
+    config=configparser.ConfigParser()
+    config.read("../config.ini",encoding='utf-8-sig')
+    if config.has_section('stock_list_configure'):
+       file_path_list = config.get("stock_list_configure","STOCK_LIST_NAME")
+    else:
+        file_path_list = ['Shenzhen_stock_list.xlsx','Shanghai_stock_list.xls'] # READ STOCK LIST
+    for file_path in file_path_list:
+        # 指定要选择的列的位置
+        columns_to_select1 = [0, 1]  # 从文件1选择的列的位置
+        columns_to_select2 = [ 4]  # 从文件2选择的列的位置
 
-    # 调用函数来合并CSV文件并选择指定列
-
-    merge_large_csv_files_with_selected_columns('price_shanghai.csv', 'found_data_for_shanghai.csv', 'merged_file_2.csv',columns_to_select1, columns_to_select2)
+        # 调用函数来合并CSV文件并选择指定列
+        price_path=f'price_{file_path.split(".")[0]}.csv'
+        sum_file_path=f'found_data_{file_path.split(".")[0]}.csv'
+        merger_file=f'merged_{file_path.split(".")[0]}.csv'
+        
+        if(compare_csv_files(price_path,sum_file_path)):
+            merge_large_csv_files_with_selected_columns(price_path, sum_file_path, merger_file,columns_to_select1, columns_to_select2)
+        
 
 def find_top_20_better_value(csv_file,column_index):
     better_list=[]

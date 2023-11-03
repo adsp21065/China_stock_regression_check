@@ -225,31 +225,37 @@ def get_stock_f10_value():
 
 
 def get_stock_today_value():
-    #file_path = 'GPLIST.xls'  # READ STOCK LIST
-    file_path = 'A_stock_list.xlsx'
-    column_name = 'A股代码'
-    checklist=[]
-    #selected_data = read_excel_column_format_string(file_path, column_name)
-    selected_data = read_excel_column(file_path, column_name)
-    if isinstance(selected_data, pd.Series):
-        print(f"成功读取列 '{column_name}' 的数据:")
-        checklist=selected_data.tolist()
-        print(checklist)
+    config=configparser.ConfigParser()
+    config.read("../config.ini",encoding='utf-8-sig')
+    if config.has_section('stock_list_configure'):
+       file_path_list = config.get("stock_list_configure","STOCK_LIST_NAME")
     else:
-        print("读取列失败，错误信息：", selected_data)
+        file_path_list = ['Shenzhen_stock_list.xlsx','Shanghai_stock_list.xls'] # READ STOCK LIST
+    for file_path in file_path_list:
+        
+        column_name = 'A股代码'
+        checklist=[]
+        #selected_data = read_excel_column_format_string(file_path, column_name)
+        selected_data = read_excel_column(file_path, column_name)
+        if isinstance(selected_data, pd.Series):
+            print(f"成功读取列 '{column_name}' 的数据:")
+            checklist=selected_data.tolist()
+            print(checklist)
+        else:
+            print("读取列失败，错误信息：", selected_data)
 
 
-    # 定义要爬取的网页URL
-    number_List = 0
-    for list in checklist:
-        stock_code=list
-        quote = ef.stock.get_latest_quote(stock_code)
-        output_file = 'price.csv'
-        value_now=quote['最新价'].tolist()
-        #print(value_now)
-        write_price_to_csv(value_now, output_file,number_List,list)
-        number_List=number_List+1
-    print('finished........!!!!!!!')
+        # 定义要爬取的网页URL
+        number_List = 0
+        for list in checklist:
+            stock_code=list
+            quote = ef.stock.get_latest_quote(stock_code)
+            output_file = f'price_{file_path.split(".")[0]}.csv'
+            value_now=quote['最新价'].tolist()
+            #print(value_now)
+            write_price_to_csv(value_now, output_file,number_List,list)
+            number_List=number_List+1
+        print('finished........!!!!!!!')
 if __name__ == '__main__':
 
     get_stock_today_value()
